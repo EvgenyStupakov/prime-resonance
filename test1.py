@@ -90,7 +90,5 @@ for n in range(FROM, TO+1):
 correct = [n for n in resonant if is_prime(n)]
 false = [n for n in resonant if not is_prime(n)]
 
-print("Резонансы:", resonant)
-print("Верные простые:", correct)
-print("Ложные срабатывания:", false)
+print("Prime:", correct)
 
