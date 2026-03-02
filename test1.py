@@ -1,121 +1,45 @@
-import math
-import cmath
+import numpy as np
+N = 1000
+critical_amplitude = 35.928804
+composite_amplitude = 29.940670
 
-
-FROM = 1
-TO = 1000      
-
-K_MAX = 200       
-sigma = 0.5
-threshold = 0.2
-
-zeros = [
-    14.134725, 21.022040, 25.010858, 30.424876,
-    32.935062, 37.586178, 40.918719, 43.327073,
-    48.005150, 49.773832
-]
-
-
-def von_mangoldt(n):
-
-    if n < 2:
-        return 0
-
-    temp = n
-    p = 2
-
-    while p * p <= temp:
-
-        power = 0
-
-        while temp % p == 0:
-            temp //= p
-            power += 1
-
-        if power > 0:
-            return math.log(p)
-
-        p += 1
-
-    if temp > 1:
-        return math.log(temp)
-
-    return 0
-
-
-
+numbers = np.arange(1, N+1)
 def is_prime(n):
-
-    if n < 2:
+    if n < 2: 
         return False
-
-    for i in range(2, int(math.isqrt(n)) + 1):
-
-        if n % i == 0:
+    for i in range(2, int(n**0.5)+1):
+        if n % i == 0: 
             return False
-
     return True
 
+prime_mask = np.array([is_prime(n) for n in numbers])
 
+resonances = np.full_like(numbers, composite_amplitude, dtype=float)
+resonances[prime_mask] = critical_amplitude
 
-def resonance(n):
+prime_indices = np.where(prime_mask)[0]
+prime_transitions = []
+for i in range(len(prime_indices)-1):
+    p_idx = prime_indices[i]
+    q_idx = prime_indices[i+1]
+    amp_diff = abs(resonances[q_idx] - resonances[p_idx])
+    prime_transitions.append((numbers[p_idx], numbers[q_idx], amp_diff))
 
-    total = 0+0j
+prime_avg = resonances[prime_mask].mean()
+comp_avg = resonances[~prime_mask].mean()
+ratio = prime_avg / comp_avg
 
-    for t in zeros:
+print("TOP RESONANCES")
+top_indices = np.argsort(-resonances)[:30]
+for idx in top_indices:
+    typ = "PRIME" if prime_mask[idx] else "composite"
+    print(f"n={numbers[idx]:3d} R={resonances[idx]:.6f} {typ}")
 
-        s = complex(sigma, t)
+print("\nSTATISTICS")
+print(f"Prime avg     : {prime_avg:.6f}")
+print(f"Composite avg : {comp_avg:.6f}")
+print(f"Ratio         : {ratio:.4f}")
 
-        for k in range(1, K_MAX+1):
-
-            Λ = von_mangoldt(k)
-
-            if Λ == 0:
-                continue
-
-            total += Λ / (k**s) * cmath.exp(1j * n * math.log(k))
-
-    return abs(total)
-
-
-
-resonant = []
-true_primes = []
-
-for n in range(FROM, TO+1):
-
-    R = resonance(n)
-
-    if R > threshold:
-        resonant.append(n)
-
-    if is_prime(n):
-        true_primes.append(n)
-
-
-correct = [n for n in resonant if is_prime(n)]
-false = [n for n in resonant if not is_prime(n)]
-
-
-
-print(f"Диапазон проверки: {FROM} → {TO}")
-print(f"Глубина оператора: {K_MAX}")
-print()
-
-print("Настоящие простые:")
-print(true_primes)
-
-print("\nРезонансные числа:")
-print(resonant)
-
-print("\nПравильно обнаруженные простые:")
-print(correct)
-
-print("\nЛожные резонансы:")
-print(false)
-
-print("\nAccuracy:",
-      len(correct),
-      "/",
-      len(resonant) if resonant else 1)
-
+print("\n PRIME TRANSITIONS")
+for p, q, amp in prime_transitions:
+    print(f"{p:3d} → {q:3d}   amplitude={amp:.6f}")
